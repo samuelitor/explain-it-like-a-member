@@ -1,0 +1,1034 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>Explain It Like a Member</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: a teller counter. The stage holds the round as a member receipt; the side rail holds roster and leaderboard. */
+:root {
+  --bg: #eef2ef;
+  --surface: #fbfcfa;
+  --receipt: #fffdf5;
+  --ink: #12303a;
+  --muted: #5a6e72;
+  --line: #d2dbd7;
+  --accent: #d98e0b;
+  --accent-soft: #fbecc9;
+  --on-accent: #1f1503;
+  --good: #2c7a4b;
+  --bad: #b23a2a;
+  --redact: #12303a;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c181c; --surface: #12242a; --receipt: #172b31; --ink: #e5eeec; --muted: #94a8aa;
+    --line: #263d43; --accent: #f0b03a; --accent-soft: #3a2c10; --on-accent: #1f1503;
+    --good: #5cc287; --bad: #f07a68; --redact: #e5eeec; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c181c; --surface: #12242a; --receipt: #172b31; --ink: #e5eeec; --muted: #94a8aa;
+  --line: #263d43; --accent: #f0b03a; --accent-soft: #3a2c10; --on-accent: #1f1503;
+  --good: #5cc287; --bad: #f07a68; --redact: #e5eeec; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 20px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 5vw, 44px); line-height: 1; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.brand p { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill { font-family: var(--mono); font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.live .dot { background: var(--good); }
+.pill.ro .dot { background: var(--accent); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 9px 14px; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.05); border-color: var(--accent); }
+.btn.big { font-family: var(--display); font-size: 20px; padding: 14px 26px; border-radius: 10px; }
+.btn.ghost { background: transparent; }
+.views { display: flex; gap: 4px; }
+.views .btn { padding: 7px 12px; }
+.views .btn[aria-current="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.teams { display: flex; flex-direction: column; gap: 10px; }
+.team { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.team.turn { background: var(--accent-soft); border-color: var(--accent); }
+.team-head { display: flex; gap: 8px; align-items: center; }
+.team-head input { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 4px 6px; font-family: var(--display); font-weight: 600; font-size: 16px; }
+.team-head input:hover, .team-head input:focus { border-color: var(--line); background: var(--bg); }
+.team-pts { font-family: var(--mono); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.team-members { font-size: 13px; color: var(--muted); padding-left: 6px; overflow-wrap: anywhere; }
+.roster select { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 3px 6px; font-size: 12px; max-width: 45%; }
+.phase { display: inline-block; font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px; border-radius: 4px; background: var(--accent-soft); }
+.phase.open { background: var(--ink); color: var(--bg); }
+.settings-body label.check { flex-direction: row; align-items: center; gap: 8px; }
+.voter select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 12px; }
+.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel h2 { font-family: var(--display); font-weight: 600; font-size: 18px; margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.panel h2 small { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--muted); }
+.rail { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+/* Stage */
+.stage { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.receipt { background: var(--receipt); border: 1px solid var(--line); border-radius: 4px; padding: 22px 22px 26px; font-family: var(--mono); position: relative; box-shadow: 0 1px 0 var(--line), 0 10px 30px -18px rgba(0,0,0,.35); }
+.receipt::after { content: ""; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px; background: linear-gradient(135deg, var(--receipt) 50%, transparent 50%) 0 0 / 12px 8px repeat-x, linear-gradient(225deg, var(--receipt) 50%, transparent 50%) 0 0 / 12px 8px repeat-x; }
+.r-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.r-rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 16px; padding: 16px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.r-rows dt { color: var(--muted); text-transform: uppercase; font-size: 12px; letter-spacing: .08em; padding-top: 2px; }
+.r-rows dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.r-rows dd strong { font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
+.mod { display: inline-flex; flex-direction: column; gap: 2px; background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 6px 10px; border-radius: 0 6px 6px 0; }
+.mod b { font-weight: 700; }
+.term-box { padding-top: 18px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.term-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.term { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6vw, 52px); line-height: 1.05; letter-spacing: -0.02em; overflow-wrap: anywhere; text-wrap: balance; }
+.redacted { display: inline-block; background: var(--redact); color: transparent; border-radius: 3px; user-select: none; font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6vw, 52px); line-height: 1.05; }
+.term-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hint { color: var(--muted); font-size: 13px; font-family: var(--body); }
+
+.empty { text-align: left; display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+.empty h3 { font-family: var(--display); font-size: 24px; margin: 0; }
+.empty ol { margin: 0; padding-left: 20px; color: var(--muted); font-family: var(--body); display: flex; flex-direction: column; gap: 4px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+.timer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.clock { font-family: var(--mono); font-weight: 700; font-size: 40px; font-variant-numeric: tabular-nums; min-width: 4.2ch; line-height: 1; }
+.clock.low { color: var(--bad); }
+.clock.done { color: var(--bad); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 100%; transition: width .25s linear; }
+
+.score { display: flex; flex-direction: column; gap: 14px; }
+.score h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.score .row { display: flex; flex-direction: column; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.votes .chip { min-width: 44px; font-family: var(--mono); font-weight: 700; }
+
+/* Roster */
+.add-row { display: flex; gap: 8px; }
+.add-row input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 12px; }
+.roster { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.roster li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.roster li:last-child { border-bottom: 0; }
+.roster .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.roster .name.done { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.tag { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.tag.now { color: var(--on-accent); background: var(--accent); padding: 1px 6px; border-radius: 4px; }
+.x { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+.x:hover { color: var(--bad); }
+.muted { color: var(--muted); font-size: 13px; margin: 0; }
+
+.board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.board li { display: grid; grid-template-columns: 2ch minmax(0,1fr) auto; gap: 10px; align-items: baseline; padding: 6px 0; font-variant-numeric: tabular-nums; }
+.board .rank { font-family: var(--mono); color: var(--muted); font-size: 13px; }
+.board .who { overflow-wrap: anywhere; }
+.board .pts { font-family: var(--mono); font-weight: 700; }
+.board li.lead .who { font-weight: 700; }
+.board li.lead .rank { color: var(--accent); }
+
+details.settings summary { cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 18px; list-style: none; }
+details.settings summary::-webkit-details-marker { display: none; }
+details.settings summary::after { content: " +"; color: var(--muted); }
+details.settings[open] summary::after { content: " −"; }
+.settings-body { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.settings-body label { font-weight: 600; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.settings-body textarea, .settings-body select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 12px; font-family: var(--mono); font-size: 13px; }
+.settings-body textarea { min-height: 140px; resize: vertical; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.rules div { font-size: 14px; color: var(--muted); }
+.rules b { display: block; color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 16px; }
+
+/* Explainer view */
+.explainer { max-width: 560px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+.explainer .receipt { padding: 26px 22px 30px; }
+.explainer .term { font-size: clamp(36px, 11vw, 60px); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; max-width: calc(100% - 32px); }
+.spinning { opacity: .7; }
+.qr { display: flex; justify-content: center; }
+.qr svg { width: 168px; height: 168px; background: #fff; padding: 8px; border-radius: 8px; }
+.room-code { font-family: var(--mono); font-weight: 700; font-size: 28px; letter-spacing: .12em; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .clock.done { animation: none; } .bar > i { transition: none; } }
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Explain It Like a Member</h1>
+      <p>Explain a tech term to a credit union member, without saying the term. The room races to guess it.</p>
+    </div>
+    <div class="top-actions">
+      <span class="pill" id="sync"><span class="dot"></span><span id="sync-text">Connecting…</span></span>
+      <nav class="views" aria-label="View">
+        <button class="btn" type="button" data-view="host">Host</button>
+        <button class="btn" type="button" data-view="explainer">Explainer</button>
+        <button class="btn" type="button" data-view="vote">Vote</button>
+      </nav>
+    </div>
+  </header>
+
+  <section id="host-view">
+    <div class="grid">
+      <div class="stage">
+        <div class="receipt" id="receipt"></div>
+        <div class="panel" id="controls-panel">
+          <div class="controls">
+            <div class="timer">
+              <span class="clock" id="clock">1:00</span>
+              <button class="btn" id="timer-toggle" type="button">Start timer</button>
+              <button class="btn ghost" id="timer-reset" type="button">Reset</button>
+            </div>
+            <button class="btn primary big" id="spin" type="button">Spin next round</button>
+          </div>
+          <div class="bar"><i id="bar"></i></div>
+          <div id="phase-row" hidden><span class="phase" id="phase"></span></div>
+        </div>
+        <div class="panel score" id="score-panel" hidden></div>
+        <div class="panel">
+          <h2>How to play</h2>
+          <div class="rules">
+            <div><b>1. Spin</b>The wheel picks an explainer, a hidden term, a member persona, and sometimes a twist.</div>
+            <div><b>2. Explain</b>60 seconds to explain the term to that member. Saying the term itself is not allowed.</div>
+            <div><b>3. Guess</b>Everyone else shouts guesses. The person playing the member must ask one in-character question.</div>
+            <div><b>4. Score</b>First correct guesser gets 2 points. The explainer gets 1 if it was guessed, plus the room's 1–5 vote.</div>
+            <div><b>Team mode</b>Teams take turns. Only the explainer's team can guess during the protected time, then any team can steal. Points add up per team.</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rail">
+        <div class="panel" id="phones-panel">
+          <h2>Phones <small id="phones-count"></small></h2>
+          <div class="room-code" id="room-code" aria-label="Room code"></div>
+          <div class="qr" id="qr"></div>
+          <p class="muted">Players scan this to vote from their phones. No sign-in needed.</p>
+          <div class="btn-row">
+            <button class="btn" id="copy-vote" type="button">Copy vote link</button>
+            <button class="btn" id="copy-ex" type="button">Copy explainer link</button>
+          </div>
+          <p class="muted">The explainer link shows the hidden term, so only send it to whoever is explaining. This game stays live while this tab is open.</p>
+        </div>
+        <div class="panel">
+          <h2>Players <small id="cycle"></small></h2>
+          <form class="add-row" id="add-form">
+            <input id="add-name" type="text" placeholder="Add a name" aria-label="Player name" autocomplete="off">
+            <button class="btn" type="submit">Add</button>
+          </form>
+          <p class="muted">Paste several names separated by commas to add them all.</p>
+          <ul class="roster" id="roster"></ul>
+        </div>
+        <div class="panel" id="teams-panel" hidden>
+          <h2>Teams <small id="turn-label"></small></h2>
+          <div class="teams" id="teams"></div>
+          <p class="muted">Click a team name to rename it.</p>
+          <div class="btn-row">
+            <button class="btn" id="split" type="button">Split randomly</button>
+            <button class="btn ghost" id="rename" type="button">New team names</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Leaderboard <small id="rounds"></small></h2>
+          <ul class="board" id="board"></ul>
+        </div>
+        <div class="panel">
+          <details class="settings" id="settings">
+            <summary>Settings</summary>
+            <div class="settings-body">
+              <label class="check"><input type="checkbox" id="team-mode"> Team mode</label>
+              <div class="settings-body" id="team-settings" hidden>
+                <label>Number of teams
+                  <select id="team-count"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+                </label>
+                <label>Protected time before steals
+                  <select id="protect"><option value="0">None, steals right away</option><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="20">20 seconds</option><option value="30">30 seconds</option></select>
+                </label>
+              </div>
+              <label>Twists
+                <select id="mod-freq">
+                  <option value="half">Every other round</option>
+                  <option value="always">Every round</option>
+                  <option value="never">Never</option>
+                </select>
+              </label>
+              <label>Terms (one per line)
+                <textarea id="terms-input" spellcheck="false"></textarea>
+              </label>
+              <div class="btn-row">
+                <button class="btn" id="terms-save" type="button">Save terms</button>
+                <button class="btn ghost" id="terms-default" type="button">Restore defaults</button>
+              </div>
+              <div class="btn-row">
+                <button class="btn danger" id="reset-cycle" type="button" data-label="Let everyone play again">Let everyone play again</button>
+                <button class="btn danger" id="reset-scores" type="button" data-label="Clear scores">Clear scores</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="explainer-view" class="explainer" hidden>
+    <div class="receipt" id="ex-receipt"></div>
+    <div class="panel">
+      <div class="timer"><span class="clock" id="ex-clock">1:00</span></div>
+      <div class="bar"><i id="ex-bar"></i></div>
+      <div id="ex-phase-row" hidden><span class="phase" id="ex-phase"></span></div>
+    </div>
+    <p class="hint">Only the explainer should look at this screen. The host's screen keeps the term hidden until it's revealed.</p>
+  </section>
+
+  <section id="vote-view" class="explainer" hidden>
+    <div class="panel voter">
+      <label for="me"><b>Who are you?</b></label>
+      <select id="me"></select>
+      <p class="muted">You can't vote on your own turn, or for your own team in team mode.</p>
+    </div>
+    <div class="receipt" id="vote-receipt"></div>
+    <p class="hint">Everyone's votes are averaged on the host's screen and count as the room vote.</p>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const DEFAULT_TERMS = [
+  "API", "Cache", "Race condition", "Merge conflict", "The cloud", "Latency", "Encryption",
+  "Two-factor authentication", "Technical debt", "Refactoring", "Load balancer", "Firewall",
+  "Browser cookie", "Rate limiting", "Deadlock", "Rollback", "Feature flag", "Unit test",
+  "Code review", "Tokenization", "Idempotency", "Webhook", "CI/CD pipeline", "Container",
+  "Microservices", "Null pointer", "Infinite loop", "Version control", "SSL certificate",
+  "DNS", "Open source", "Legacy code", "Hotfix", "Sprint", "Backlog", "Regex",
+  "Recursion", "Push notification", "Session timeout", "Pagination", "404 error",
+  "Beta testing", "Backup", "Phishing", "Password hashing", "Database index", "Bug"
+];
+const PERSONAS = [
+  "A grandmother who still balances her checkbook by hand",
+  "A teenager opening their first checking account",
+  "A small business owner on a 10-minute lunch break",
+  "A member services rep on their first day",
+  "A retiree who comes in for the lobby coffee",
+  "A skeptical auditor who wants proof",
+  "A five-year-old at the teller window, waiting for a lollipop",
+  "A member who only ever uses the drive-thru",
+  "Someone who just moved here and is shopping for a credit union",
+  "A member calling from a very loud car"
+];
+const MODS = [
+  { name: "Banned words", rule: "You can't say money, account, or computer." },
+  { name: "Speed round", rule: "You only get 20 seconds.", secs: 20 },
+  { name: "Props only", rule: "Use at least one object from your desk." },
+  { name: "Short words", rule: "One-syllable words only, as much as you can." },
+  { name: "Sports commentator", rule: "Explain it as live play-by-play." },
+  { name: "Rhyme time", rule: "Your last sentence has to rhyme." },
+  { name: "Wild card", rule: "The previous explainer may swap your term for a new one." },
+  { name: "Bank words only", rule: "Every comparison must involve the credit union." }
+];
+const TEAM_NAMES = [
+  "The Hotfixes", "The Rollbacks", "Merge Conflicts", "Null Pointers", "Race Conditions",
+  "Compound Interest", "The Routing Numbers", "Two-Factor Club", "Dividend Devs",
+  "The Overdraft Protection", "Stack Overflow Savings", "The Ledger Lords", "Direct Deposits", "Cache Money"
+];
+const LS_KEY = "eilam-state-v1";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), ms))]);
+const CLIENT = Math.random().toString(36).slice(2, 12);
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+function blank() {
+  return { v: 1, players: [], played: [], terms: null, modFreq: "half", round: null, history: [], count: 0, teamMode: false, teams: [], teamCount: 2, protectSecs: 20, turn: 0 };
+}
+function normalize(s) {
+  const b = blank();
+  if (!s || typeof s !== "object") return b;
+  return {
+    v: 1,
+    players: Array.isArray(s.players) ? s.players.filter((p) => p && p.id && p.name) : [],
+    played: Array.isArray(s.played) ? s.played : [],
+    terms: Array.isArray(s.terms) && s.terms.length ? s.terms : null,
+    modFreq: ["half", "always", "never"].includes(s.modFreq) ? s.modFreq : "half",
+    round: s.round && typeof s.round === "object" ? s.round : null,
+    history: Array.isArray(s.history) ? s.history : [],
+    count: Number(s.count) || 0,
+    rev: Number(s.rev) || 0,
+    by: typeof s.by === "string" ? s.by : null,
+    teamMode: !!s.teamMode,
+    teams: Array.isArray(s.teams) ? s.teams.filter((t) => t && t.id && t.name) : [],
+    teamCount: [2, 3, 4].includes(s.teamCount) ? s.teamCount : 2,
+    protectSecs: [0, 10, 15, 20, 30].includes(s.protectSecs) ? s.protectSecs : 20,
+    turn: Number(s.turn) || 0
+  };
+}
+function loadLocal() { try { const raw = localStorage.getItem(LS_KEY); return raw ? normalize(JSON.parse(raw)) : null; } catch { return null; } }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch {} }
+
+/* The host's browser owns the game. Phones join it peer-to-peer (PeerJS) with ?room=CODE in the link. */
+const PEER_PREFIX = "eilam-ufcu-";
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".split("");
+const joinCode = (new URLSearchParams(location.search).get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || null;
+const isHost = !joinCode;
+const newCode = () => Array.from({ length: 5 }, () => pick(CODE_CHARS)).join("");
+let roomCode = joinCode || (() => { try { return localStorage.getItem("eilam-room"); } catch { return null; } })() || newCode();
+let peer = null, conns = new Set(), hostConn = null, retryTimer = null, clockSkew = 0;
+const now = () => Date.now() + clockSkew;
+
+let state = (isHost && loadLocal()) || blank();
+let syncMode = "connecting";  // connecting | live | missing | error | local
+let spinning = false, peeking = false, beeped = 0, audioCtx = null;
+let myId = (() => { try { let v = localStorage.getItem("eilam-voter"); if (!v) { v = uid() + uid(); localStorage.setItem("eilam-voter", v); } return v; } catch { return CLIENT; } })();
+let votes = isHost ? (() => { try { return JSON.parse(localStorage.getItem("eilam-votes")) || {}; } catch { return {}; } })() : {};
+let myPlayer = (() => { try { return localStorage.getItem("eilam-me"); } catch { return null; } })();
+let voterKey = "";
+
+/* ---------- sync ---------- */
+function commit(mutate) {
+  if (!isHost) { toast("Only the host's screen can change the game."); return; }
+  mutate(state);
+  state.rev = (state.rev || 0) + 1;
+  saveLocal();
+  render();
+  broadcast();
+}
+function snapshot() { return { t: "state", state, votes, now: Date.now() }; }
+function broadcast() {
+  const msg = snapshot();
+  conns.forEach((c) => { try { if (c.open) c.send(msg); } catch {} });
+}
+function recordVote(voter, entry) {
+  const r = state.round;
+  const next = {};
+  Object.entries(votes).forEach(([k, v]) => { if (r && v && v.roundId === r.id) next[k] = v; });
+  next[voter] = entry;
+  votes = next;
+  try { localStorage.setItem("eilam-votes", JSON.stringify(votes)); } catch {}
+  render();
+  broadcast();
+}
+function onClientMessage(m) {
+  if (!m || m.t !== "vote" || typeof m.voter !== "string") return;
+  const r = state.round, v = Number(m.vote);
+  if (!r || m.roundId !== r.id || !(v >= 1 && v <= 5) || !state.players.some((p) => p.id === m.player)) return;
+  recordVote(m.voter.slice(0, 40), { roundId: r.id, round: r.n, vote: v, player: m.player });
+}
+
+function startHost(attempt = 0) {
+  try { localStorage.setItem("eilam-room", roomCode); } catch {}
+  peer = new Peer(PEER_PREFIX + roomCode);
+  syncMode = "connecting"; renderSync(); renderPhones();
+  peer.on("open", () => { syncMode = "live"; renderSync(); });
+  peer.on("connection", (c) => {
+    c.on("open", () => { conns.add(c); c.send(snapshot()); renderSync(); });
+    c.on("data", onClientMessage);
+    c.on("close", () => { conns.delete(c); renderSync(); });
+    c.on("error", () => { conns.delete(c); renderSync(); });
+  });
+  peer.on("disconnected", () => {
+    if (peer.destroyed) return;
+    syncMode = "error"; renderSync();
+    setTimeout(() => { try { if (peer.disconnected && !peer.destroyed) peer.reconnect(); } catch {} }, 2000);
+  });
+  peer.on("error", (e) => {
+    if (e.type === "unavailable-id") {
+      // Usually this same room from before a refresh, still releasing. Wait, then give up and take a new code.
+      peer.destroy();
+      if (attempt < 3) setTimeout(() => startHost(attempt + 1), 2500);
+      else { roomCode = newCode(); startHost(0); toast("That room was open somewhere else, so this screen got a new room code."); }
+    } else if (["network", "server-error", "socket-error", "socket-closed"].includes(e.type)) {
+      syncMode = "error"; renderSync();
+    }
+  });
+}
+
+function startClient() {
+  peer = new Peer();
+  syncMode = "connecting"; renderSync();
+  peer.on("open", connectToHost);
+  peer.on("disconnected", () => {
+    if (peer.destroyed) return;
+    setTimeout(() => { try { if (peer.disconnected && !peer.destroyed) peer.reconnect(); } catch {} }, 2000);
+  });
+  peer.on("error", (e) => {
+    if (e.type === "peer-unavailable") { syncMode = "missing"; renderSync(); retry(3000); }
+    else if (["network", "server-error", "socket-error", "socket-closed"].includes(e.type)) { syncMode = "error"; renderSync(); }
+  });
+}
+function retry(ms) { clearTimeout(retryTimer); retryTimer = setTimeout(connectToHost, ms); }
+function connectToHost() {
+  if (!peer || peer.destroyed || peer.disconnected || (hostConn && hostConn.open)) return;
+  const c = peer.connect(PEER_PREFIX + roomCode, { reliable: true });
+  hostConn = c;
+  c.on("open", () => { syncMode = "live"; renderSync(); render(); });
+  c.on("data", (m) => {
+    if (!m || m.t !== "state") return;
+    clockSkew = (Number(m.now) || Date.now()) - Date.now();
+    state = normalize(m.state);
+    votes = m.votes && typeof m.votes === "object" ? m.votes : {};
+    render();
+  });
+  c.on("close", () => { if (hostConn === c) { hostConn = null; syncMode = "error"; renderSync(); retry(2000); } });
+}
+
+function startSync() {
+  if (typeof Peer === "undefined") { syncMode = "local"; renderSync(); return; }
+  if (isHost) startHost(); else startClient();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || !peer || peer.destroyed) return;
+    if (peer.disconnected) { try { peer.reconnect(); } catch {} }
+    else if (!isHost && !(hostConn && hostConn.open)) connectToHost();
+  });
+}
+
+/* ---------- game logic ---------- */
+const termList = () => state.terms || DEFAULT_TERMS;
+const nameOf = (id) => (state.players.find((p) => p.id === id) || {}).name || "Former player";
+const teamOf = (pid) => (state.players.find((p) => p.id === pid) || {}).team || null;
+const teamName = (tid) => (state.teams.find((t) => t.id === tid) || {}).name || "No team";
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function smallestTeam(s) {
+  const counts = s.teams.map((t) => ({ id: t.id, n: s.players.filter((p) => p.team === t.id).length }));
+  counts.sort((a, b) => a.n - b.n);
+  return counts.length ? counts[0].id : null;
+}
+function splitPlayers(s) {
+  shuffle(s.players.map((p) => p.id)).forEach((id, i) => { s.players.find((p) => p.id === id).team = s.teams[i % s.teams.length].id; });
+}
+function makeTeams(s, n) {
+  const names = shuffle(TEAM_NAMES.slice());
+  s.teams = Array.from({ length: n }, (_, i) => ({ id: uid(), name: names[i] }));
+  splitPlayers(s);
+}
+function resizeTeams(s, n) {
+  if (!s.teams.length) return makeTeams(s, n);
+  if (n > s.teams.length) {
+    const used = s.teams.map((t) => t.name);
+    const names = shuffle(TEAM_NAMES.filter((x) => !used.includes(x)));
+    while (s.teams.length < n) s.teams.push({ id: uid(), name: names.shift() || `Team ${s.teams.length + 1}` });
+  } else {
+    const removed = s.teams.slice(n).map((t) => t.id);
+    s.teams = s.teams.slice(0, n);
+    s.players.forEach((p) => { if (!p.team || removed.includes(p.team)) p.team = null; });
+    s.players.forEach((p) => { if (!p.team) p.team = smallestTeam(s); });
+  }
+}
+
+function finalizeRound(s) {
+  const r = s.round;
+  if (r && r.revealed) {
+    s.history.push({ n: r.n, term: r.term, explainer: r.explainer, guesser: r.guesser || null, vote: effectiveVote(r), team: r.team || null, gteam: r.team && r.guesser ? teamOf(r.guesser) : null });
+    if (s.history.length > 300) s.history = s.history.slice(-300);
+  }
+  s.round = null;
+}
+function newRound(s, explainerId) {
+  const others = s.players.filter((p) => p.id !== explainerId);
+  const recent = new Set(s.history.slice(-40).map((h) => h.term));
+  let terms = termList().filter((t) => !recent.has(t));
+  if (!terms.length) terms = termList();
+  const useMod = s.modFreq === "always" || (s.modFreq === "half" && s.count % 2 === 1);
+  const mod = useMod ? pick(MODS) : null;
+  const total = (mod && mod.secs) || 60;
+  s.count += 1;
+  s.round = {
+    id: uid(), n: s.count, explainer: explainerId, member: others.length ? pick(others).id : null,
+    term: pick(terms), persona: pick(PERSONAS), modifier: mod ? mod.name : null, rule: mod ? mod.rule : null,
+    revealed: false, guesser: null, vote: 0,
+    team: s.teamMode ? teamOf(explainerId) : null,
+    protect: s.teamMode ? Math.min(s.protectSecs, Math.floor(total / 2)) : 0,
+    timer: { running: false, endsAt: 0, remaining: total * 1000, total }
+  };
+  if (!s.played.includes(explainerId)) s.played.push(explainerId);
+}
+function revealRound(s) {
+  s.round.revealed = true;
+  const t = s.round.timer;
+  if (t.running) { t.remaining = Math.max(0, t.endsAt - Date.now()); t.running = false; }
+}
+function liveVote(r) {
+  if (!r || !r.id) return { count: 0, avg: 0 };
+  const vs = Object.values(votes)
+    .filter((v) => v && v.roundId === r.id && v.vote >= 1 && v.vote <= 5)
+    .filter((v) => v.player !== r.explainer && !(r.team && v.player && teamOf(v.player) === r.team))
+    .map((v) => v.vote);
+  return { count: vs.length, avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : 0 };
+}
+function effectiveVote(r) {
+  if (r.vote) return r.vote;
+  const live = liveVote(r);
+  return live.count ? Math.round(live.avg) : 0;
+}
+function castVote(v) {
+  const r = state.round;
+  if (!r || !r.id || !myId || !myPlayer) return;
+  const entry = { roundId: r.id, round: r.n, vote: v, player: myPlayer };
+  if (isHost) { recordVote(myId, entry); return; }
+  if (!hostConn || !hostConn.open) { toast("Not connected to the host yet. Try again in a moment."); return; }
+  votes = { ...votes, [myId]: entry };
+  render();
+  hostConn.send({ t: "vote", voter: myId, ...entry });
+}
+function teamScores() {
+  const pts = {};
+  state.teams.forEach((t) => (pts[t.id] = 0));
+  const entries = state.history.slice();
+  if (state.round && state.round.revealed) entries.push(state.round);
+  entries.forEach((h) => {
+    const live = h === state.round;
+    const vote = live ? effectiveVote(h) : (h.vote || 0);
+    const gteam = live ? (h.team && h.guesser ? teamOf(h.guesser) : null) : h.gteam;
+    if (h.team && h.team in pts) pts[h.team] += vote + (h.guesser ? 1 : 0);
+    if (gteam && gteam in pts) pts[gteam] += 2;
+  });
+  return pts;
+}
+function scores() {
+  const pts = {};
+  state.players.forEach((p) => (pts[p.id] = 0));
+  const entries = state.history.slice();
+  if (state.round && state.round.revealed) entries.push(state.round);
+  entries.forEach((h) => {
+    const vote = h === state.round ? effectiveVote(h) : (h.vote || 0);
+    if (h.explainer in pts) pts[h.explainer] += vote + (h.guesser ? 1 : 0);
+    if (h.guesser && h.guesser in pts) pts[h.guesser] += 2;
+  });
+  return pts;
+}
+function remainingMs(r) {
+  if (!r) return 60000;
+  const t = r.timer;
+  return t.running ? Math.max(0, t.endsAt - now()) : Math.max(0, t.remaining);
+}
+
+function spin() {
+  if (spinning || state.players.length < 2) return;
+  let pool = null, team = null, teamIdx = 0, resetCycle = false;
+  if (state.teamMode && state.teams.length) {
+    for (let k = 0; k < state.teams.length; k++) {
+      const idx = (state.turn + k) % state.teams.length;
+      const members = state.players.filter((p) => p.team === state.teams[idx].id);
+      if (members.length) { team = state.teams[idx]; teamIdx = idx; pool = members; break; }
+    }
+    if (!team) { toast("Put players on teams first."); return; }
+  } else pool = state.players.slice();
+  let fresh = pool.filter((p) => !state.played.includes(p.id));
+  if (!fresh.length) { resetCycle = true; fresh = pool; }
+  const chosen = pick(fresh);
+  const resetIds = pool.map((p) => p.id);
+  const finish = () => {
+    spinning = false;
+    commit((s) => {
+      finalizeRound(s);
+      if (resetCycle) s.played = s.played.filter((id) => !resetIds.includes(id));
+      newRound(s, chosen.id);
+      if (team) s.turn = teamIdx + 1;
+    });
+    if (resetCycle) toast(team ? `Everyone on ${team.name} has explained, so their turn order starts over.` : "Everyone has played, so a new cycle started.");
+  };
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) return finish();
+  spinning = true;
+  $("spin").disabled = true;
+  const names = state.players.map((p) => p.name);
+  let i = 0;
+  const box = $("receipt");
+  box.classList.add("spinning");
+  const tick = setInterval(() => {
+    box.innerHTML = `<div class="r-head"><span>Picking an explainer…</span></div><div class="term-box"><span class="term">${esc(names[i++ % names.length])}</span></div>`;
+  }, 80);
+  setTimeout(() => { clearInterval(tick); box.classList.remove("spinning"); finish(); }, 1100);
+}
+
+/* ---------- rendering ---------- */
+function receiptHTML(r, { showTerm, explainerView }) {
+  const head = `<div class="r-head"><span>Member slip · Round ${String(r.n).padStart(3, "0")}</span><span>${r.revealed ? "Revealed" : "In progress"}</span></div>`;
+  const mod = r.modifier ? `<span class="mod"><b>${esc(r.modifier)}</b><span>${esc(r.rule)}</span></span>` : `<span>None this round</span>`;
+  const rows = `<dl class="r-rows">
+      <dt>Explainer</dt><dd><strong>${esc(nameOf(r.explainer))}</strong></dd>
+      ${r.team ? `<dt>Team</dt><dd>${esc(teamName(r.team))}</dd>` : ""}
+      <dt>Member</dt><dd>${esc(r.persona)}${r.member ? `<br><span class="hint">Played by ${esc(nameOf(r.member))}, who asks one question in character</span>` : ""}</dd>
+      <dt>Twist</dt><dd>${mod}</dd>
+    </dl>`;
+  const term = showTerm
+    ? `<span class="term">${esc(r.term)}</span>`
+    : `<span class="redacted" aria-label="Term hidden">${"█".repeat(Math.max(5, Math.min(14, r.term.length)))}</span>`;
+  let actions = "";
+  if (!explainerView) {
+    actions = r.revealed
+      ? `<p class="hint">Score the round below, then spin the next one.</p>`
+      : `<div class="term-actions">
+          <button class="btn" id="peek" type="button">Hold to peek</button>
+          <button class="btn primary" id="reveal" type="button">Reveal to everyone</button>
+        </div>
+        <p class="hint">The explainer can see the term on their phone with the explainer link in the Phones panel.</p>`;
+  }
+  return `${head}${rows}<div class="term-box"><span class="term-label">${explainerView ? "Your term. Don't say it." : "The term"}</span>${term}${actions}</div>`;
+}
+
+function renderStage() {
+  const r = state.round;
+  const box = $("receipt");
+  if (!r) {
+    const n = state.players.length;
+    box.innerHTML = `<div class="r-head"><span>Member slip · Ready</span><span>${n} player${n === 1 ? "" : "s"}</span></div>
+      <div class="empty">
+        <h3>${n < 2 ? "Add at least two players to start" : "Ready for round one"}</h3>
+        <ol>
+          <li>Add your team in the Players panel.</li>
+          <li>Share your screen with this page.</li>
+          <li>Press Spin next round.</li>
+        </ol>
+      </div>`;
+  } else {
+    box.innerHTML = receiptHTML(r, { showTerm: r.revealed || peeking, explainerView: false });
+    const peek = $("peek");
+    if (peek) {
+      const on = (e) => { e.preventDefault(); peeking = true; renderStage(); $("peek")?.focus(); };
+      const off = () => { if (peeking) { peeking = false; renderStage(); } };
+      peek.addEventListener("pointerdown", on);
+      peek.addEventListener("keydown", (e) => { if ((e.key === " " || e.key === "Enter") && !peeking) on(e); });
+      peek.addEventListener("keyup", off);
+      document.addEventListener("pointerup", off, { once: true });
+      peek.addEventListener("pointerleave", off);
+    }
+    $("reveal")?.addEventListener("click", () => commit(revealRound));
+  }
+  $("spin").disabled = spinning || state.players.length < 2;
+  $("spin").textContent = r ? "Spin next round" : "Spin first round";
+  $("timer-toggle").disabled = !r || r.revealed;
+  $("timer-reset").disabled = !r || r.revealed;
+  $("timer-toggle").textContent = r && r.timer.running ? "Pause" : (r && r.timer.remaining < r.timer.total * 1000 && r.timer.remaining > 0 ? "Resume" : "Start timer");
+}
+
+function renderScore() {
+  const r = state.round, panel = $("score-panel");
+  if (!r) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const guessers = state.players.filter((p) => p.id !== r.explainer)
+    .sort((a, b) => (r.team ? (b.team === r.team) - (a.team === r.team) : 0));
+  panel.innerHTML = `<h2>Score round ${r.n}</h2>${r.revealed ? "" : `<p class="muted">Choosing a guesser or a vote also reveals the term.</p>`}
+    <div class="row"><h3>${r.team ? `Who guessed it first? Their team gets +2, and ${esc(teamName(r.team))} gets +1.` : `Who guessed it first? (+2, and +1 for ${esc(nameOf(r.explainer))})`}</h3>
+      <div class="chips">
+        ${guessers.map((p) => `<button class="chip" type="button" data-guess="${p.id}" aria-pressed="${r.guesser === p.id}">${esc(p.name)}${r.team && p.team !== r.team ? " · steal" : ""}</button>`).join("")}
+        <button class="chip" type="button" data-guess="" aria-pressed="${!r.guesser}">Nobody</button>
+      </div></div>
+    <div class="row"><h3>Room vote: would a member get it?</h3>
+      <p class="muted">${voteSummary(r)}</p>
+      <div class="chips votes">${[1, 2, 3, 4, 5].map((v) => `<button class="chip" type="button" data-vote="${v}" aria-pressed="${r.vote === v}">${v}</button>`).join("")}</div></div>`;
+  panel.querySelectorAll("[data-guess]").forEach((b) => b.addEventListener("click", () => commit((s) => { revealRound(s); s.round.guesser = b.dataset.guess || null; })));
+  panel.querySelectorAll("[data-vote]").forEach((b) => b.addEventListener("click", () => commit((s) => { revealRound(s); const v = Number(b.dataset.vote); s.round.vote = s.round.vote === v ? 0 : v; })));
+}
+
+function voteSummary(r) {
+  const live = liveVote(r);
+  const phones = live.count
+    ? `${live.count} phone vote${live.count === 1 ? "" : "s"}, average ${live.avg.toFixed(1)}${r.vote ? "" : ` (counts as ${Math.round(live.avg)})`}.`
+    : "No phone votes yet. Players vote by scanning the code in the Phones panel.";
+  return `${phones} ${r.vote ? "Your pick overrides the phones. Tap it again to clear it." : "Tap a number to override."}`;
+}
+
+function renderTeams() {
+  $("teams-panel").hidden = !state.teamMode;
+  if (!state.teamMode) return;
+  const wrap = $("teams");
+  if (wrap.contains(document.activeElement)) return;
+  const pts = teamScores();
+  const live = state.round && state.round.team;
+  const upId = live ? state.round.team : (state.teams.length ? state.teams[state.turn % state.teams.length].id : null);
+  $("turn-label").textContent = upId ? `${live ? "Up now" : "Up next"}: ${teamName(upId)}` : "";
+  wrap.innerHTML = state.teams.map((t) => {
+    const members = state.players.filter((p) => p.team === t.id).map((p) => esc(p.name)).join(", ") || "No players yet";
+    return `<div class="team ${t.id === upId ? "turn" : ""}"><div class="team-head"><input type="text" id="team-${t.id}" value="${esc(t.name)}" data-team-name="${t.id}" aria-label="Team name" maxlength="40"><span class="team-pts">${pts[t.id] || 0}</span></div><div class="team-members">${members}</div></div>`;
+  }).join("");
+  wrap.querySelectorAll("[data-team-name]").forEach((inp) => {
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
+    inp.addEventListener("change", () => {
+      const v = inp.value.trim().slice(0, 40), id = inp.dataset.teamName;
+      if (!v) { inp.value = teamName(id); return; }
+      commit((s) => { const t = s.teams.find((x) => x.id === id); if (t) t.name = v; });
+    });
+  });
+}
+
+function renderVoter() {
+  const key = state.players.map((p) => `${p.id}:${p.name}:${p.team}`).join("|") + state.teams.map((t) => t.name).join("|") + state.teamMode + "#" + myPlayer;
+  if (key === voterKey) return;
+  voterKey = key;
+  $("me").innerHTML = `<option value="">Choose your name</option>` + state.players.map((p) =>
+    `<option value="${p.id}" ${p.id === myPlayer ? "selected" : ""}>${esc(p.name)}${state.teamMode && p.team ? ` (${esc(teamName(p.team))})` : ""}</option>`).join("");
+}
+
+function renderVote() {
+  const r = state.round, box = $("vote-receipt");
+  renderVoter();
+  if (!r) {
+    box.innerHTML = `<div class="r-head"><span>Room vote · Waiting</span></div><div class="empty"><h3>No round yet</h3><p class="hint">When the host spins a round, you can vote here.</p></div>`;
+    return;
+  }
+  const live = liveVote(r);
+  const mine = myId && votes[myId] && votes[myId].roundId === r.id ? votes[myId].vote : 0;
+  const blocked = !myPlayer ? "Choose your name above to vote."
+    : myPlayer === r.explainer ? "You're explaining, so you don't vote this round."
+    : (r.team && teamOf(myPlayer) === r.team) ? `${esc(teamName(r.team))} is up, so you can't vote for your own team.` : "";
+  const connected = isHost || !!(hostConn && hostConn.open);
+  const canVote = connected && !!r.id && !blocked;
+  const term = r.revealed ? `<span class="term">${esc(r.term)}</span>` : `<span class="hint">The term is hidden until the host reveals it.</span>`;
+  const ui = canVote
+    ? `<div class="chips votes">${[1, 2, 3, 4, 5].map((v) => `<button class="chip" type="button" data-myvote="${v}" aria-pressed="${mine === v}">${v}</button>`).join("")}</div>
+       <p class="hint">${mine ? `You voted ${mine}. Tap another number to change it.` : "Tap a number. You can change it until the next round."}</p>`
+    : `<p class="hint">${!connected ? "Connecting to the host…" : !r.id ? "Voting starts with the next round." : blocked}</p>`;
+  box.innerHTML = `<div class="r-head"><span>Room vote · Round ${String(r.n).padStart(3, "0")}</span><span>${live.count} vote${live.count === 1 ? "" : "s"} in</span></div>
+    <div class="term-box">
+      <span class="term-label">${esc(nameOf(r.explainer))} is explaining</span>${term}
+      <span class="term-label">Would a member get it?</span>${ui}
+    </div>`;
+  box.querySelectorAll("[data-myvote]").forEach((b) => b.addEventListener("click", () => castVote(Number(b.dataset.myvote))));
+}
+
+function renderRoster() {
+  const list = $("roster");
+  if (!state.players.length) {
+    list.innerHTML = `<li><span class="muted">No players yet. Add the people in today's meeting.</span></li>`;
+  } else {
+    list.innerHTML = state.players.map((p) => {
+      const now = state.round && state.round.explainer === p.id;
+      const done = state.played.includes(p.id) && !now;
+      return `<li><span class="name ${done ? "done" : ""}">${esc(p.name)}</span>
+        ${now ? `<span class="tag now">Up now</span>` : done ? `<span class="tag">Played</span>` : ""}
+        ${state.teamMode ? `<select id="team-of-${p.id}" data-team-of="${p.id}" aria-label="Team for ${esc(p.name)}">${state.teams.map((t) => `<option value="${t.id}" ${t.id === p.team ? "selected" : ""}>${esc(t.name)}</option>`).join("")}</select>` : ""}
+        <button class="x" type="button" data-remove="${p.id}" aria-label="Remove ${esc(p.name)}">×</button></li>`;
+    }).join("");
+    list.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => commit((s) => {
+      const id = b.dataset.remove;
+      s.players = s.players.filter((p) => p.id !== id);
+      s.played = s.played.filter((x) => x !== id);
+      if (s.round && s.round.explainer === id) s.round = null;
+      else if (s.round && s.round.member === id) s.round.member = null;
+    })));
+    list.querySelectorAll("[data-team-of]").forEach((sel) => sel.addEventListener("change", () => commit((s) => {
+      const p = s.players.find((x) => x.id === sel.dataset.teamOf);
+      if (p) p.team = sel.value;
+    })));
+  }
+  const left = state.players.filter((p) => !state.played.includes(p.id)).length;
+  $("cycle").textContent = state.players.length ? `${left} yet to explain` : "";
+}
+
+function renderBoard() {
+  const pts = scores();
+  const rows = state.players.map((p) => ({ p, s: pts[p.id] || 0 })).sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name));
+  const top = rows.length ? rows[0].s : 0;
+  const played = state.history.length + (state.round && state.round.revealed ? 1 : 0);
+  $("rounds").textContent = `${played} round${played === 1 ? "" : "s"} scored`;
+  $("board").innerHTML = rows.length
+    ? rows.map((r, i) => `<li class="${r.s > 0 && r.s === top ? "lead" : ""}"><span class="rank">${i + 1}</span><span class="who">${esc(r.p.name)}</span><span class="pts">${r.s}</span></li>`).join("")
+    : `<li><span></span><span class="muted">Scores show up after the first round.</span><span></span></li>`;
+}
+
+function renderSettings() {
+  $("mod-freq").value = state.modFreq;
+  $("team-mode").checked = state.teamMode;
+  $("team-settings").hidden = !state.teamMode;
+  $("team-count").value = String(state.teamCount);
+  $("protect").value = String(state.protectSecs);
+  if (document.activeElement !== $("terms-input")) $("terms-input").value = termList().join("\n");
+}
+
+function renderExplainer() {
+  const r = state.round, box = $("ex-receipt");
+  if (!r) {
+    box.innerHTML = `<div class="r-head"><span>Member slip · Waiting</span></div><div class="empty"><h3>No round yet</h3><p class="hint">When the host spins, your term appears here.</p></div>`;
+  } else {
+    box.innerHTML = receiptHTML(r, { showTerm: true, explainerView: true });
+  }
+}
+
+function renderSync() {
+  const pill = $("sync"), text = $("sync-text"), n = conns.size;
+  pill.className = "pill " + (syncMode === "live" ? "live" : syncMode === "local" ? "" : "ro");
+  text.textContent = syncMode === "live" ? (isHost ? `Room ${roomCode} · ${n} phone${n === 1 ? "" : "s"} connected` : `Connected to room ${roomCode}`)
+    : syncMode === "connecting" ? "Connecting…"
+    : syncMode === "missing" ? `Waiting for room ${roomCode} to open…`
+    : syncMode === "error" ? (isHost ? "Reconnecting… the game is saved in this browser" : "Reconnecting to the host…")
+    : "Saved in this browser only";
+  if (isHost) $("phones-count").textContent = syncMode === "live" ? `${n} connected` : "";
+}
+
+let phonesFor = "";
+function joinLink(view) { return `${location.origin}${location.pathname}?room=${roomCode}#${view}`; }
+function renderPhones() {
+  if (!isHost || phonesFor === roomCode) return;
+  phonesFor = roomCode;
+  $("room-code").textContent = roomCode;
+  try {
+    const qr = qrcode(0, "M");
+    qr.addData(joinLink("vote"));
+    qr.make();
+    $("qr").innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true, alt: "QR code for the vote link" });
+  } catch { $("qr").innerHTML = ""; }
+}
+async function copyLink(view, label) {
+  const link = joinLink(view);
+  try { await navigator.clipboard.writeText(link); toast(`${label} copied.`); }
+  catch { window.prompt(`Copy the ${label.toLowerCase()}:`, link); }
+}
+
+function render() {
+  let view = location.hash === "#explainer" ? "explainer" : location.hash === "#vote" ? "vote" : "host";
+  if (!isHost && view === "host") view = "vote";
+  document.querySelector('[data-view="host"]').hidden = !isHost;
+  $("phones-panel").hidden = !isHost;
+  $("host-view").hidden = view !== "host";
+  $("explainer-view").hidden = view !== "explainer";
+  $("vote-view").hidden = view !== "vote";
+  document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-current", String(b.dataset.view === view)));
+  if (view === "explainer") renderExplainer();
+  else if (view === "vote") renderVote();
+  else if (!spinning) { renderStage(); renderScore(); renderRoster(); renderTeams(); renderBoard(); renderSettings(); }
+  else { renderRoster(); renderTeams(); renderBoard(); }
+  renderSync();
+  updateClock();
+}
+
+function fmt(ms) { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+function updateClock() {
+  const r = state.round;
+  const ms = remainingMs(r);
+  const total = r ? r.timer.total * 1000 : 60000;
+  const done = r && !r.revealed && ms === 0 && (r.timer.running || r.timer.remaining === 0);
+  ["clock", "ex-clock"].forEach((id) => {
+    const el = $(id);
+    el.textContent = done ? "0:00" : fmt(ms);
+    el.classList.toggle("done", !!done);
+    el.classList.toggle("low", !done && ms <= 10000 && !!r && r.timer.running);
+  });
+  ["bar", "ex-bar"].forEach((id) => ($(id).style.width = `${(ms / total) * 100}%`));
+  const showPhase = !!(r && r.team && !r.revealed);
+  let phaseText = "", open = false;
+  if (showPhase) {
+    const left = (r.protect || 0) * 1000 - (total - ms);
+    open = left <= 0;
+    phaseText = open ? "Steals open: any team can guess" : `${teamName(r.team)} only · steals open in ${Math.ceil(left / 1000)}s`;
+  }
+  [["phase-row", "phase"], ["ex-phase-row", "ex-phase"]].forEach(([row, id]) => {
+    $(row).hidden = !showPhase;
+    $(id).textContent = phaseText;
+    $(id).classList.toggle("open", open);
+  });
+  if (done && r.timer.running && beeped !== r.n && audioCtx) { beeped = r.n; beep(); }
+  if (done && !spinning) $("timer-toggle").textContent = "Restart timer";
+}
+function beep() {
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 660; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.15, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    o.start(); o.stop(audioCtx.currentTime + 0.6);
+  } catch {}
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 3200);
+}
+
+/* ---------- events ---------- */
+$("spin").addEventListener("click", spin);
+$("copy-vote").addEventListener("click", () => copyLink("vote", "Vote link"));
+$("copy-ex").addEventListener("click", () => copyLink("explainer", "Explainer link"));
+$("timer-toggle").addEventListener("click", () => {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+  commit((s) => {
+    const t = s.round.timer;
+    const expired = t.running ? t.endsAt <= Date.now() : t.remaining <= 0;
+    if (expired) { t.remaining = t.total * 1000; t.endsAt = Date.now() + t.remaining; t.running = true; beeped = 0; }
+    else if (t.running) { t.remaining = Math.max(0, t.endsAt - Date.now()); t.running = false; }
+    else { t.endsAt = Date.now() + t.remaining; t.running = true; }
+  });
+});
+$("timer-reset").addEventListener("click", () => commit((s) => { const t = s.round.timer; t.running = false; t.remaining = t.total * 1000; }));
+$("add-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const names = $("add-name").value.split(",").map((n) => n.trim()).filter(Boolean);
+  if (!names.length) return;
+  const existing = new Set(state.players.map((p) => p.name.toLowerCase()));
+  const fresh = names.filter((n) => !existing.has(n.toLowerCase())).slice(0, 60);
+  if (!fresh.length) { toast("That name is already on the list."); return; }
+  commit((s) => { fresh.forEach((n) => s.players.push({ id: uid(), name: n.slice(0, 40), team: s.teamMode && s.teams.length ? smallestTeam(s) : null })); });
+  $("add-name").value = "";
+});
+$("mod-freq").addEventListener("change", (e) => commit((s) => { s.modFreq = e.target.value; }));
+$("team-mode").addEventListener("change", (e) => commit((s) => {
+  s.teamMode = e.target.checked;
+  if (!s.teamMode) return;
+  if (!s.teams.length) makeTeams(s, s.teamCount);
+  else s.players.forEach((p) => { if (!s.teams.some((t) => t.id === p.team)) p.team = smallestTeam(s); });
+}));
+$("team-count").addEventListener("change", (e) => commit((s) => { s.teamCount = Number(e.target.value); resizeTeams(s, s.teamCount); }));
+$("protect").addEventListener("change", (e) => commit((s) => { s.protectSecs = Number(e.target.value); }));
+$("split").addEventListener("click", () => { commit(splitPlayers); toast("Teams reshuffled."); });
+$("rename").addEventListener("click", () => commit((s) => { const names = shuffle(TEAM_NAMES.slice()); s.teams.forEach((t, i) => { t.name = names[i]; }); }));
+$("terms-save").addEventListener("click", () => {
+  const terms = [...new Set($("terms-input").value.split("\n").map((t) => t.trim()).filter(Boolean))].slice(0, 400);
+  if (!terms.length) { toast("Add at least one term, one per line."); return; }
+  commit((s) => { s.terms = terms; });
+  toast(`Saved ${terms.length} terms.`);
+});
+$("terms-default").addEventListener("click", () => { commit((s) => { s.terms = null; }); $("terms-input").value = DEFAULT_TERMS.join("\n"); toast("Default terms restored."); });
+
+function armed(btn, action) {
+  btn.addEventListener("click", () => {
+    if (btn.classList.contains("armed")) {
+      btn.classList.remove("armed"); btn.textContent = btn.dataset.label; action();
+    } else {
+      btn.classList.add("armed"); btn.textContent = "Click again to confirm";
+      setTimeout(() => { btn.classList.remove("armed"); btn.textContent = btn.dataset.label; }, 3500);
+    }
+  });
+}
+armed($("reset-cycle"), () => { commit((s) => { s.played = s.round ? [s.round.explainer] : []; }); toast("Everyone can be picked again."); });
+armed($("reset-scores"), () => { commit((s) => { s.history = []; s.round = null; s.count = 0; s.played = []; s.turn = 0; }); toast("Scores cleared."); });
+
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.view === "host") history.replaceState(null, "", location.pathname + location.search);
+  else location.hash = b.dataset.view;
+  render();
+}));
+window.addEventListener("hashchange", render);
+$("me").addEventListener("change", (e) => {
+  myPlayer = e.target.value || null;
+  try { if (myPlayer) localStorage.setItem("eilam-me", myPlayer); else localStorage.removeItem("eilam-me"); } catch {}
+  voterKey = "";
+  render();
+});
+
+setInterval(updateClock, 250);
+render();
+renderPhones();
+startSync();
+</script>
+
+</body></html>

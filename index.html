@@ -165,6 +165,8 @@ details.settings[open] summary::after { content: " −"; }
 .explainer .term { font-size: clamp(36px, 11vw, 60px); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; max-width: calc(100% - 32px); }
 .spinning { opacity: .7; }
+.hint-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 12px 14px; font-family: var(--body); max-width: 100%; }
+.hint-card p { margin: 0 0 6px; font-size: 15px; }
 .qr { display: flex; justify-content: center; }
 .qr svg { width: 168px; height: 168px; background: #fff; padding: 8px; border-radius: 8px; }
 .room-code { font-family: var(--mono); font-weight: 700; font-size: 28px; letter-spacing: .12em; text-align: center; }
@@ -271,6 +273,7 @@ details.settings[open] summary::after { content: " −"; }
                 </select>
               </label>
               <label>Terms (one per line)
+                <span class="muted">Add an optional hint for the explainer after a bar: Term | what it means | what to try saying. Built-in terms already have hints.</span>
                 <textarea id="terms-input" spellcheck="false"></textarea>
               </label>
               <div class="btn-row">
@@ -348,6 +351,62 @@ const TEAM_NAMES = [
   "Compound Interest", "The Routing Numbers", "Two-Factor Club", "Dividend Devs",
   "The Overdraft Protection", "Stack Overflow Savings", "The Ledger Lords", "Direct Deposits", "Cache Money"
 ];
+// Private crib notes for the explainer: what the term means, and an analogy they can say out loud.
+const HINTS = {
+  "api": ["A set of rules that lets one app ask another app for information or to do something.", "Like a drive-thru: you order from a menu, the kitchen does the work, and you get back exactly what you asked for."],
+  "cache": ["A saved copy of something kept close by so it loads faster next time.", "Like keeping cash in your wallet instead of walking to the vault every time."],
+  "race condition": ["A bug where two things happen at almost the same moment, and the result depends on which finishes first.", "Two tellers withdraw from the same account in the same second, and both think the money is still there."],
+  "merge conflict": ["Two people changed the same part of a file, and the system can't tell whose change to keep.", "Two people edit the same line of a shared form, and someone has to decide which version wins."],
+  "the cloud": ["Computers in someone else's data center that store your stuff and run programs, reached over the internet.", "Like a safe deposit box: your things aren't at home, but you can get to them whenever you need."],
+  "latency": ["The delay between asking for something and starting to get it back.", "The pause between sending the canister up the drive-thru tube and it arriving at the window."],
+  "encryption": ["Scrambling information so only someone with the right key can read it.", "Writing a note in a secret code that only you and the person receiving it know."],
+  "two-factor authentication": ["Proving it's you with two different things, usually a password plus a code sent to your phone.", "Like needing both your debit card and your PIN at the ATM."],
+  "technical debt": ["Shortcuts taken to ship faster that make future work slower until someone cleans them up.", "Like putting expenses on a credit card: fast now, but the interest builds until you pay it off."],
+  "refactoring": ["Rewriting code to be cleaner without changing what it does.", "Reorganizing a messy filing cabinet. Same files, just easier to find."],
+  "load balancer": ["Something that spreads incoming traffic across several servers so none of them gets overwhelmed.", "The person at the front of the line saying \"next available teller, window 3.\""],
+  "firewall": ["A filter that decides which network traffic is allowed in or out.", "Like the security guard at the door who checks who gets into the building."],
+  "browser cookie": ["A small note a website saves in your browser so it remembers you next time.", "Like the branch remembering your name and your usual request when you walk in."],
+  "rate limiting": ["Capping how many requests someone can make in a set amount of time.", "Like the ATM only letting you take out so much per day."],
+  "deadlock": ["Two processes each waiting for the other to finish, so neither ever does.", "Two cars at a four-way stop, each waving the other to go first, forever."],
+  "rollback": ["Undoing a change and going back to the last version that worked.", "Like reversing a transaction that was posted by mistake."],
+  "feature flag": ["A switch that turns a feature on or off for some users without releasing a new version.", "Opening a new service at one branch first, with the option to turn it off overnight."],
+  "unit test": ["A small automatic check that one piece of code does what it should.", "Counting one teller drawer to make sure it balances before checking the whole branch."],
+  "code review": ["A teammate reads your changes and approves them before they go in.", "A second set of eyes signing off on a loan before it's funded."],
+  "tokenization": ["Replacing sensitive data like a card number with a stand-in value that's useless if stolen.", "Like a coat-check ticket: it gets you your coat, but it's worthless to anyone who finds it."],
+  "idempotency": ["Sending the same request twice has the same effect as sending it once.", "Pressing the elevator button five times still calls one elevator. Tapping Submit twice still makes one payment."],
+  "webhook": ["An automatic message one system sends another the moment something happens.", "Like a text alert the instant a deposit hits, instead of checking your balance over and over."],
+  "ci/cd pipeline": ["An automatic assembly line that tests code changes and releases them.", "Like a check going through processing: scanned, verified, and posted without anyone carrying it by hand."],
+  "container": ["A package that bundles an app with everything it needs, so it runs the same anywhere.", "Like a shipping crate: whatever's inside, any ship or truck can carry it."],
+  "microservices": ["Building an app as lots of small, separate pieces that each do one job.", "Instead of one person doing everything, the branch has a teller, a loan officer, and a member rep."],
+  "null pointer": ["A bug where the program reaches for something that isn't there.", "Like going to pull a member's file and finding an empty folder."],
+  "infinite loop": ["Code that repeats forever because nothing tells it to stop.", "A phone menu that keeps saying \"press 1 to return to the main menu.\""],
+  "version control": ["A system that saves every change to files, so you can see the history and go back.", "Like a ledger: every change is recorded, and you can see what the balance was on any date."],
+  "ssl certificate": ["A website's ID card that proves it's real and keeps the connection private.", "The padlock in the address bar. Like an ID check before handing over anything private."],
+  "dns": ["The internet's phone book: it turns a website name into the number computers use to find it.", "Like looking up a branch by name to get its street address."],
+  "open source": ["Software whose code anyone can read, use, and improve.", "A recipe published for anyone to cook, change, and share."],
+  "legacy code": ["Old code still running something important that few people understand anymore.", "The old core system everyone is afraid to touch because it still runs payroll."],
+  "hotfix": ["A quick, urgent repair pushed out right away for a serious problem.", "Patching a leak in the roof today instead of waiting for the remodel."],
+  "sprint": ["A short, fixed stretch of time, often two weeks, where a team finishes a planned set of work.", "Like a two-week promo campaign with a clear list of goals."],
+  "backlog": ["The running list of work the team wants to do but hasn't gotten to yet.", "The stack of applications in the inbox waiting to be processed."],
+  "regex": ["A compact pattern used to find or check text, like \"any 5 digits.\"", "A search rule like \"find every phone number in this document.\""],
+  "recursion": ["When something is defined using a smaller version of itself.", "Two mirrors facing each other. Or a nesting doll with smaller dolls inside."],
+  "push notification": ["A message an app pops onto your phone even when you're not using it.", "The alert that pops up saying \"Your deposit is available.\""],
+  "session timeout": ["Getting logged out automatically after a while of doing nothing, for safety.", "Like the teller closing your window if you step away for too long."],
+  "pagination": ["Splitting a long list into pages so it loads a bit at a time.", "Your statement shows 20 transactions, then you tap Next for more."],
+  "404 error": ["The message you get when a web page can't be found.", "Like asking for a member file that was moved or never existed."],
+  "beta testing": ["Letting a small group try something before everyone gets it, to catch problems early.", "Inviting a few members to try the new app before the full launch."],
+  "backup": ["An extra copy of data kept somewhere safe in case the original is lost.", "Like keeping a copy of important papers in a safe deposit box."],
+  "phishing": ["A fake email or text pretending to be someone trustworthy, to trick you into giving up information.", "A text that looks like it's from the credit union asking for your login. We never do that."],
+  "password hashing": ["Storing a scrambled fingerprint of a password instead of the password itself.", "Like keeping a thumbprint on file instead of a copy of your key. It can check you, but it can't open the door."],
+  "database index": ["A lookup structure that helps a database find records fast without reading everything.", "Like the alphabetical tabs in a filing cabinet, or the lookup list at the back of a textbook."],
+  "bug": ["A mistake in code that makes it behave the wrong way.", "Like a typo in a routing number that sends money to the wrong place."]
+};
+// A term line can carry its own hint: "Term | what it means | what to try saying".
+function parseTerm(line) {
+  const [term, what, tip] = String(line).split("|").map((x) => x.trim());
+  const d = HINTS[term.toLowerCase()] || [];
+  return { term, hint: what || d[0] || null, tip: tip || (what ? null : d[1] || null) };
+}
 const LS_KEY = "eilam-state-v1";
 
 const $ = (id) => document.getElementById(id);
@@ -400,6 +459,7 @@ const now = () => Date.now() + clockSkew;
 
 let state = (isHost && loadLocal()) || blank();
 let syncMode = "connecting";  // connecting | live | missing | error | local
+let hintOpen = null;
 let spinning = false, peeking = false, beeped = 0, audioCtx = null;
 let myId = (() => { try { let v = localStorage.getItem("eilam-voter"); if (!v) { v = uid() + uid(); localStorage.setItem("eilam-voter", v); } return v; } catch { return CLIENT; } })();
 let votes = isHost ? (() => { try { return JSON.parse(localStorage.getItem("eilam-votes")) || {}; } catch { return {}; } })() : {};
@@ -420,7 +480,7 @@ function snapshot(c) {
   const out = clone(state), r = out.round;
   if (r) {
     const isExplainer = !!(r.exToken && c.metadata && c.metadata.ex === r.exToken);
-    if (!r.revealed && !isExplainer) r.term = null;
+    if (!r.revealed && !isExplainer) { r.term = null; r.hint = null; r.tip = null; }
     r.exToken = null;
   }
   return { t: "state", state: out, votes, now: Date.now() };
@@ -556,15 +616,16 @@ function finalizeRound(s) {
 function newRound(s, explainerId) {
   const others = s.players.filter((p) => p.id !== explainerId);
   const recent = new Set(s.history.slice(-40).map((h) => h.term));
-  let terms = termList().filter((t) => !recent.has(t));
-  if (!terms.length) terms = termList();
+  let terms = termList().map(parseTerm).filter((t) => t.term && !recent.has(t.term));
+  if (!terms.length) terms = termList().map(parseTerm).filter((t) => t.term);
+  const entry = pick(terms);
   const useMod = s.modFreq === "always" || (s.modFreq === "half" && s.count % 2 === 1);
   const mod = useMod ? pick(MODS) : null;
   const total = (mod && mod.secs) || 60;
   s.count += 1;
   s.round = {
     id: uid(), n: s.count, explainer: explainerId, exToken: uid() + uid(), member: others.length ? pick(others).id : null,
-    term: pick(terms), persona: pick(PERSONAS), modifier: mod ? mod.name : null, rule: mod ? mod.rule : null,
+    term: entry.term, hint: entry.hint, tip: entry.tip, persona: pick(PERSONAS), modifier: mod ? mod.name : null, rule: mod ? mod.rule : null,
     revealed: false, guesser: null, vote: 0,
     team: s.teamMode ? teamOf(explainerId) : null,
     protect: s.teamMode ? Math.min(s.protectSecs, Math.floor(total / 2)) : 0,
@@ -685,6 +746,15 @@ function receiptHTML(r, { showTerm, explainerView }) {
     ? `<span class="term">${esc(r.term)}</span>`
     : `<span class="redacted" aria-label="Term hidden">${"█".repeat(Math.max(5, Math.min(14, r.term.length)))}</span>`;
   let actions = "";
+  if (explainerView && (r.hint || r.tip)) {
+    actions = hintOpen === r.id
+      ? `<div class="hint-card">
+          ${r.hint ? `<span class="term-label">What it means</span><p>${esc(r.hint)}</p>` : ""}
+          ${r.tip ? `<span class="term-label">Try saying</span><p>${esc(r.tip)}</p>` : ""}
+          <button class="btn ghost" id="hint-toggle" type="button">Hide hint</button>
+        </div>`
+      : `<button class="btn" id="hint-toggle" type="button">Stuck? Show a hint</button>`;
+  }
   if (!explainerView) {
     actions = r.revealed
       ? `<p class="hint">Score the round below, then spin the next one.</p>`
@@ -878,6 +948,7 @@ function renderExplainer() {
       return;
     }
     box.innerHTML = receiptHTML(r, { showTerm: true, explainerView: true });
+    $("hint-toggle")?.addEventListener("click", () => { hintOpen = hintOpen === r.id ? null : r.id; renderExplainer(); });
   }
 }
 

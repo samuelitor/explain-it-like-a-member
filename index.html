@@ -226,7 +226,7 @@ details.settings[open] summary::after { content: " −"; }
             <button class="btn" id="copy-vote" type="button">Copy vote link</button>
             <button class="btn" id="copy-ex" type="button">Copy explainer link</button>
           </div>
-          <p class="muted">The explainer link shows the hidden term, so only send it to whoever is explaining. This game stays live while this tab is open.</p>
+          <p class="muted">The explainer link is new every round and stops showing the term once the next round is spun. Send it only to whoever is up. This game stays live while this tab is open.</p>
         </div>
         <div class="panel">
           <h2>Players <small id="cycle"></small></h2>
@@ -389,7 +389,9 @@ function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state))
 /* The host's browser owns the game. Phones join it peer-to-peer (PeerJS) with ?room=CODE in the link. */
 const PEER_PREFIX = "eilam-ufcu-";
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".split("");
-const joinCode = (new URLSearchParams(location.search).get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || null;
+const qs = new URLSearchParams(location.search);
+const exToken = (qs.get("ex") || "").replace(/[^a-z0-9]/g, "").slice(0, 32) || null;
+const joinCode = (qs.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || null;
 const isHost = !joinCode;
 const newCode = () => Array.from({ length: 5 }, () => pick(CODE_CHARS)).join("");
 let roomCode = joinCode || (() => { try { return localStorage.getItem("eilam-room"); } catch { return null; } })() || newCode();
@@ -413,10 +415,18 @@ function commit(mutate) {
   render();
   broadcast();
 }
-function snapshot() { return { t: "state", state, votes, now: Date.now() }; }
+// Phones never get the hidden term unless their link carries this round's explainer token.
+function snapshot(c) {
+  const out = clone(state), r = out.round;
+  if (r) {
+    const isExplainer = !!(r.exToken && c.metadata && c.metadata.ex === r.exToken);
+    if (!r.revealed && !isExplainer) r.term = null;
+    r.exToken = null;
+  }
+  return { t: "state", state: out, votes, now: Date.now() };
+}
 function broadcast() {
-  const msg = snapshot();
-  conns.forEach((c) => { try { if (c.open) c.send(msg); } catch {} });
+  conns.forEach((c) => { try { if (c.open) c.send(snapshot(c)); } catch {} });
 }
 function recordVote(voter, entry) {
   const r = state.round;
@@ -441,7 +451,7 @@ function startHost(attempt = 0) {
   syncMode = "connecting"; renderSync(); renderPhones();
   peer.on("open", () => { syncMode = "live"; renderSync(); });
   peer.on("connection", (c) => {
-    c.on("open", () => { conns.add(c); c.send(snapshot()); renderSync(); });
+    c.on("open", () => { conns.add(c); c.send(snapshot(c)); renderSync(); });
     c.on("data", onClientMessage);
     c.on("close", () => { conns.delete(c); renderSync(); });
     c.on("error", () => { conns.delete(c); renderSync(); });
@@ -479,7 +489,7 @@ function startClient() {
 function retry(ms) { clearTimeout(retryTimer); retryTimer = setTimeout(connectToHost, ms); }
 function connectToHost() {
   if (!peer || peer.destroyed || peer.disconnected || (hostConn && hostConn.open)) return;
-  const c = peer.connect(PEER_PREFIX + roomCode, { reliable: true });
+  const c = peer.connect(PEER_PREFIX + roomCode, { reliable: true, metadata: { ex: exToken } });
   hostConn = c;
   c.on("open", () => { syncMode = "live"; renderSync(); render(); });
   c.on("data", (m) => {
@@ -553,7 +563,7 @@ function newRound(s, explainerId) {
   const total = (mod && mod.secs) || 60;
   s.count += 1;
   s.round = {
-    id: uid(), n: s.count, explainer: explainerId, member: others.length ? pick(others).id : null,
+    id: uid(), n: s.count, explainer: explainerId, exToken: uid() + uid(), member: others.length ? pick(others).id : null,
     term: pick(terms), persona: pick(PERSONAS), modifier: mod ? mod.name : null, rule: mod ? mod.rule : null,
     revealed: false, guesser: null, vote: 0,
     team: s.teamMode ? teamOf(explainerId) : null,
@@ -861,10 +871,23 @@ function renderExplainer() {
   if (!r) {
     box.innerHTML = `<div class="r-head"><span>Member slip · Waiting</span></div><div class="empty"><h3>No round yet</h3><p class="hint">When the host spins, your term appears here.</p></div>`;
   } else {
+    if (!isHost && !r.term) {
+      const msg = !exToken ? "Open the explainer link the host sends you to see your term."
+        : "This link was for an earlier round. Ask the host for this round's explainer link.";
+      box.innerHTML = `<div class="r-head"><span>Member slip · Round ${String(r.n).padStart(3, "0")}</span></div><div class="empty"><h3>Term hidden</h3><p class="hint">${esc(nameOf(r.explainer))} is explaining. ${msg}</p></div>`;
+      return;
+    }
     box.innerHTML = receiptHTML(r, { showTerm: true, explainerView: true });
   }
 }
 
+function renderExButton() {
+  if (!isHost) return;
+  const r = state.round, b = $("copy-ex");
+  const ok = !!(r && r.exToken && !r.revealed);
+  b.disabled = !ok;
+  b.textContent = ok ? `Copy explainer link for ${nameOf(r.explainer)}` : "Copy explainer link";
+}
 function renderSync() {
   const pill = $("sync"), text = $("sync-text"), n = conns.size;
   pill.className = "pill " + (syncMode === "live" ? "live" : syncMode === "local" ? "" : "ro");
@@ -877,7 +900,10 @@ function renderSync() {
 }
 
 let phonesFor = "";
-function joinLink(view) { return `${location.origin}${location.pathname}?room=${roomCode}#${view}`; }
+function joinLink(view) {
+  const ex = view === "explainer" && state.round ? `&ex=${state.round.exToken}` : "";
+  return `${location.origin}${location.pathname}?room=${roomCode}${ex}#${view}`;
+}
 function renderPhones() {
   if (!isHost || phonesFor === roomCode) return;
   phonesFor = roomCode;
@@ -890,6 +916,7 @@ function renderPhones() {
   } catch { $("qr").innerHTML = ""; }
 }
 async function copyLink(view, label) {
+  if (view === "explainer" && !(state.round && state.round.exToken && !state.round.revealed)) { toast("Spin a round first. Each round gets its own explainer link."); return; }
   const link = joinLink(view);
   try { await navigator.clipboard.writeText(link); toast(`${label} copied.`); }
   catch { window.prompt(`Copy the ${label.toLowerCase()}:`, link); }
@@ -909,6 +936,7 @@ function render() {
   else if (!spinning) { renderStage(); renderScore(); renderRoster(); renderTeams(); renderBoard(); renderSettings(); }
   else { renderRoster(); renderTeams(); renderBoard(); }
   renderSync();
+  renderExButton();
   updateClock();
 }
 

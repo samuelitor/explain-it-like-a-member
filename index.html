@@ -212,7 +212,7 @@ details.settings[open] summary::after { content: " −"; }
             <div><b>1. Spin</b>The wheel picks an explainer, a hidden term, a member persona, and sometimes a twist.</div>
             <div><b>2. Explain</b>60 seconds to explain the term to that member. Saying the term itself is not allowed.</div>
             <div><b>3. Guess</b>Everyone else shouts guesses. The person playing the member must ask one in-character question.</div>
-            <div><b>4. Score</b>First correct guesser gets 2 points. The explainer gets 1 if it was guessed, plus the room's 1–5 vote.</div>
+            <div><b>4. Score</b>First correct guesser gets 2 points. The explainer gets 1 if it was guessed<span id="rule-vote">, plus the room's 1–5 vote</span>.</div>
             <div><b>Team mode</b>Teams take turns. Only the explainer's team can guess during the protected time, then any team can steal. Points add up per team.</div>
           </div>
         </div>
@@ -223,7 +223,7 @@ details.settings[open] summary::after { content: " −"; }
           <h2>Phones <small id="phones-count"></small></h2>
           <div class="room-code" id="room-code" aria-label="Room code"></div>
           <div class="qr" id="qr"></div>
-          <p class="muted">Players scan this to vote from their phones. No sign-in needed.</p>
+          <p class="muted" id="phones-help">Players scan this to vote from their phones. No sign-in needed.</p>
           <div class="btn-row">
             <button class="btn" id="copy-vote" type="button">Copy vote link</button>
             <button class="btn" id="copy-ex" type="button">Copy explainer link</button>
@@ -265,6 +265,7 @@ details.settings[open] summary::after { content: " −"; }
                   <select id="protect"><option value="0">None, steals right away</option><option value="10">10 seconds</option><option value="15">15 seconds</option><option value="20">20 seconds</option><option value="30">30 seconds</option></select>
                 </label>
               </div>
+              <label class="check"><input type="checkbox" id="room-vote"> Room vote (1–5 points for the explainer)</label>
               <label>Twists
                 <select id="mod-freq">
                   <option value="half">Every other round</option>
@@ -419,7 +420,7 @@ const CLIENT = Math.random().toString(36).slice(2, 12);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 function blank() {
-  return { v: 1, players: [], played: [], terms: null, modFreq: "half", round: null, history: [], count: 0, teamMode: false, teams: [], teamCount: 2, protectSecs: 20, turn: 0 };
+  return { v: 1, players: [], played: [], terms: null, modFreq: "half", round: null, history: [], count: 0, teamMode: false, teams: [], teamCount: 2, protectSecs: 20, turn: 0, roomVote: true };
 }
 function normalize(s) {
   const b = blank();
@@ -439,7 +440,8 @@ function normalize(s) {
     teams: Array.isArray(s.teams) ? s.teams.filter((t) => t && t.id && t.name) : [],
     teamCount: [2, 3, 4].includes(s.teamCount) ? s.teamCount : 2,
     protectSecs: [0, 10, 15, 20, 30].includes(s.protectSecs) ? s.protectSecs : 20,
-    turn: Number(s.turn) || 0
+    turn: Number(s.turn) || 0,
+    roomVote: s.roomVote !== false
   };
 }
 function loadLocal() { try { const raw = localStorage.getItem(LS_KEY); return raw ? normalize(JSON.parse(raw)) : null; } catch { return null; } }
@@ -647,6 +649,7 @@ function liveVote(r) {
   return { count: vs.length, avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : 0 };
 }
 function effectiveVote(r) {
+  if (!state.roomVote) return 0;
   if (r.vote) return r.vote;
   const live = liveVote(r);
   return live.count ? Math.round(live.avg) : 0;
@@ -808,15 +811,15 @@ function renderScore() {
   panel.hidden = false;
   const guessers = state.players.filter((p) => p.id !== r.explainer)
     .sort((a, b) => (r.team ? (b.team === r.team) - (a.team === r.team) : 0));
-  panel.innerHTML = `<h2>Score round ${r.n}</h2>${r.revealed ? "" : `<p class="muted">Choosing a guesser or a vote also reveals the term.</p>`}
+  panel.innerHTML = `<h2>Score round ${r.n}</h2>${r.revealed ? "" : `<p class="muted">Choosing a guesser${state.roomVote ? " or a vote" : ""} also reveals the term.</p>`}
     <div class="row"><h3>${r.team ? `Who guessed it first? Their team gets +2, and ${esc(teamName(r.team))} gets +1.` : `Who guessed it first? (+2, and +1 for ${esc(nameOf(r.explainer))})`}</h3>
       <div class="chips">
         ${guessers.map((p) => `<button class="chip" type="button" data-guess="${p.id}" aria-pressed="${r.guesser === p.id}">${esc(p.name)}${r.team && p.team !== r.team ? " · steal" : ""}</button>`).join("")}
         <button class="chip" type="button" data-guess="" aria-pressed="${!r.guesser}">Nobody</button>
-      </div></div>
+      </div></div>${state.roomVote ? `
     <div class="row"><h3>Room vote: would a member get it?</h3>
       <p class="muted">${voteSummary(r)}</p>
-      <div class="chips votes">${[1, 2, 3, 4, 5].map((v) => `<button class="chip" type="button" data-vote="${v}" aria-pressed="${r.vote === v}">${v}</button>`).join("")}</div></div>`;
+      <div class="chips votes">${[1, 2, 3, 4, 5].map((v) => `<button class="chip" type="button" data-vote="${v}" aria-pressed="${r.vote === v}">${v}</button>`).join("")}</div></div>` : ""}`;
   panel.querySelectorAll("[data-guess]").forEach((b) => b.addEventListener("click", () => commit((s) => { revealRound(s); s.round.guesser = b.dataset.guess || null; })));
   panel.querySelectorAll("[data-vote]").forEach((b) => b.addEventListener("click", () => commit((s) => { revealRound(s); const v = Number(b.dataset.vote); s.round.vote = s.round.vote === v ? 0 : v; })));
 }
@@ -865,6 +868,10 @@ function renderVote() {
   renderVoter();
   if (!r) {
     box.innerHTML = `<div class="r-head"><span>Room vote · Waiting</span></div><div class="empty"><h3>No round yet</h3><p class="hint">When the host spins a round, you can vote here.</p></div>`;
+    return;
+  }
+  if (!state.roomVote) {
+    box.innerHTML = `<div class="r-head"><span>Room vote · Off</span></div><div class="empty"><h3>No voting this game</h3><p class="hint">The host turned off the room vote. Just shout your guesses.</p></div>`;
     return;
   }
   const live = liveVote(r);
@@ -930,6 +937,9 @@ function renderBoard() {
 function renderSettings() {
   $("mod-freq").value = state.modFreq;
   $("team-mode").checked = state.teamMode;
+  $("room-vote").checked = state.roomVote;
+  $("rule-vote").hidden = !state.roomVote;
+  $("phones-help").textContent = state.roomVote ? "Players scan this to vote from their phones. No sign-in needed." : "Room vote is off, so phones are only needed for the explainer link.";
   $("team-settings").hidden = !state.teamMode;
   $("team-count").value = String(state.teamCount);
   $("protect").value = String(state.protectSecs);
@@ -1080,6 +1090,7 @@ $("add-form").addEventListener("submit", (e) => {
   $("add-name").value = "";
 });
 $("mod-freq").addEventListener("change", (e) => commit((s) => { s.modFreq = e.target.value; }));
+$("room-vote").addEventListener("change", (e) => commit((s) => { s.roomVote = e.target.checked; }));
 $("team-mode").addEventListener("change", (e) => commit((s) => {
   s.teamMode = e.target.checked;
   if (!s.teamMode) return;
